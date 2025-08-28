@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alfil Cazador de Zanahorias</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .instructions {
+            text-align: center;
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: linear-gradient(45deg, #f39c12, #e74c3c);
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(4, 60px); 
+            gap: 2px;
+            border: 3px solid #2c3e50;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 35px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .square.white {
+            background-color: #f0d9b5;
+        }
+
+        .square.black {
+            background-color: #b58863;
+        }
+
+        .square.highlight {
+            background-color: #7fb069 !important;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+            transform: scale(0.95);
+        }
+
+        /* Base bishop style - no strong neon initially */
+        .square.bishop {
+            background: radial-gradient(circle, #00ffff, #0088ff) !important;
+            animation: bishopPulse 1.5s infinite !important; /* Only pulse initially */
+            box-shadow: none !important; /* No initial box-shadow for neon */
+            border: 3px solid transparent !important; /* No initial border */
+            position: relative !important;
+            z-index: 25 !important;
+            transform: scale(1.05) !important;
+        }
+        
+        /* Remove the ::after glow for initial state */
+        .square.bishop::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            background: transparent; /* No initial background glow */
+            border-radius: 8px;
+            z-index: -1;
+            animation: none; /* No initial animation */
+        }
+        
+        /* Animations for neon glow, will be applied via JS classes */
+        @keyframes rotateNeon {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes neonGlow {
+            0% {
+                box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff;
+                filter: brightness(1);
+            }
+            100% {
+                box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff, 0 0 40px #00ffff;
+                filter: brightness(1.5);
+            }
+        }
+
+        /* New classes for different levels of neon glow */
+        .bishop-neon-1 {
+            box-shadow: 
+                0 0 5px #00ffff,
+                inset 0 0 5px rgba(0, 255, 255, 0.2) !important;
+            border: 1px solid #00ffff !important;
+        }
+        .bishop-neon-2 {
+            box-shadow: 
+                0 0 10px #00ffff, 
+                0 0 15px #00ffff,
+                inset 0 0 10px rgba(0, 255, 255, 0.3) !important;
+            border: 2px solid #00ffff !important;
+        }
+        .bishop-neon-3 {
+            box-shadow: 
+                0 0 15px #00ffff, 
+                0 0 25px #00ffff,
+                inset 0 0 15px rgba(0, 255, 255, 0.4) !important;
+            border: 3px solid #00ffff !important;
+            animation: bishopPulse 1.5s infinite, neonGlow 2s ease-in-out infinite alternate !important; /* Start full animation */
+        }
+        
+        /* Add ::after glow for higher levels of neon */
+        .bishop-neon-3::after {
+            background: linear-gradient(45deg, 
+                transparent, 
+                rgba(0, 255, 255, 0.3), 
+                transparent, 
+                rgba(0, 255, 255, 0.3), 
+                transparent);
+            animation: rotateNeon 3s linear infinite;
+        }
+
+
+        .square.carrot {
+            background: radial-gradient(circle, #f39c12, #e67e22);
+            animation: carrotBounce 1s infinite alternate;
+        }
+
+        @keyframes bishopPulse {
+            0%, 100% { 
+                transform: scale(1.05);
+                filter: brightness(1.2);
+            }
+            50% { 
+                transform: scale(1.15);
+                filter: brightness(1.5);
+            }
+        }
+
+        @keyframes carrotBounce {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-5px); }
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.2) rotate(5deg); }
+            50% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.2) rotate(5deg); }
+        }
+
+        .celebrate {
+            animation: celebrate 0.6s ease-in-out;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 15px;
+            color: #2c3e50;
+        }
+
+        .reset-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .game-info {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🏰 Alfil Cazador de Zanahorias 🥕</h1>
+        <div class="instructions">
+            Haz clic en una casilla destacada para mover el alfil diagonalmente y atrapar las zanahorias
+        </div>
+        
+        <div class="score-container">
+            <div>Puntuación: <span id="score">0</span></div>
+            <div>Zanahorias: <span id="carrots-eaten">0</span></div>
+            <div>Tiempo: <span id="time">0</span>s</div>
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="controls">
+            <button class="reset-btn" onclick="resetGame()">🔄 Nuevo Juego</button>
+            <div class="game-info">
+                El alfil y las zanahorias solo aparecen en la mitad inferior del tablero
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let board = [];
+        let bishopPosition = { row: 3, col: 0 };
+        let carrotPosition = null;
+        let score = 0;
+        let carrotsEaten = 0; // New variable to track eaten carrots
+        let gameTime = 0;
+        let gameTimer = null;
+        let possibleMoves = [];
+
+        function initBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            board = [];
+            
+            for (let row = 0; row < 4; row++) {
+                board[row] = [];
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    const originalRow = row + 4; 
+                    square.className = `square ${(originalRow + col) % 2 === 0 ? 'white' : 'black'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    square.addEventListener('click', handleSquareClick);
+                    boardElement.appendChild(square);
+                    board[row][col] = square;
+                }
+            }
+            
+            updateBishopPosition();
+            generateCarrot();
+            showPossibleMoves();
+        }
+
+        function updateBishopPosition() {
+            // Remove bishop and its content from ALL squares
+            document.querySelectorAll('.square').forEach(sq => {
+                sq.classList.remove('bishop', 'bishop-neon-1', 'bishop-neon-2', 'bishop-neon-3');
+                if (sq.textContent === '♗') {
+                    sq.textContent = '';
+                }
+            });
+            
+            // Place the bishop on the current position
+            const square = board[bishopPosition.row][bishopPosition.col];
+            square.classList.add('bishop');
+            square.textContent = '♗';
+
+            // Apply neon glow based on carrots eaten
+            if (carrotsEaten > 0 && carrotsEaten <= 3) {
+                square.classList.add('bishop-neon-1');
+            } else if (carrotsEaten > 3 && carrotsEaten <= 6) {
+                square.classList.add('bishop-neon-2');
+            } else if (carrotsEaten > 6) {
+                square.classList.add('bishop-neon-3');
+            }
+        }
+
+        function calculateAllReachableSquares() {
+            const reachable = new Set();
+            const visited = new Set();
+            const queue = [bishopPosition];
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const key = `${current.row},${current.col}`;
+                
+                if (visited.has(key)) continue;
+                visited.add(key);
+                
+                reachable.add(key);
+                
+                const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+                
+                for (const [rowDir, colDir] of directions) {
+                    for (let i = 1; i < 8; i++) {
+                        const newRow = current.row + (rowDir * i);
+                        const newCol = current.col + (colDir * i);
+                        
+                        if (newRow >= 0 && newRow < 4 && newCol >= 0 && newCol < 8) {
+                            const newKey = `${newRow},${newCol}`;
+                            if (!visited.has(newKey)) {
+                                queue.push({ row: newRow, col: newCol });
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            const result = [];
+            reachable.forEach(key => {
+                const [row, col] = key.split(',').map(Number);
+                result.push({ row, col });
+            });
+            
+            return result;
+        }
+
+        function generateCarrot() {
+            if (carrotPosition) {
+                const oldCarrot = board[carrotPosition.row][carrotPosition.col];
+                oldCarrot.classList.remove('carrot');
+                if (oldCarrot.textContent === '🥕') {
+                    oldCarrot.textContent = '';
+                }
+            }
+            
+            const reachableSquares = calculateAllReachableSquares();
+            
+            const availableSquares = reachableSquares.filter(square => 
+                !(square.row === bishopPosition.row && square.col === bishopPosition.col)
+            );
+            
+            if (availableSquares.length === 0) {
+                alert('¡Felicidades! Has dominado todo el tablero. ¡Nuevo juego!');
+                resetGame();
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * availableSquares.length);
+            carrotPosition = availableSquares[randomIndex];
+            
+            const square = board[carrotPosition.row][carrotPosition.col];
+            square.classList.add('carrot');
+            square.textContent = '🥕';
+        }
+
+        function calculatePossibleMoves() {
+            const moves = [];
+            const directions = [
+                [-1, -1], [-1, 1], [1, -1], [1, 1]
+            ];
+
+            for (const [rowDir, colDir] of directions) {
+                for (let i = 1; i < 8; i++) {
+                    const newRow = bishopPosition.row + (rowDir * i);
+                    const newCol = bishopPosition.col + (colDir * i);
+                    
+                    if (newRow >= 0 && newRow < 4 && newCol >= 0 && newCol < 8) {
+                        moves.push({ row: newRow, col: newCol });
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            return moves;
+        }
+
+        function showPossibleMoves() {
+            document.querySelectorAll('.square').forEach(sq => {
+                sq.classList.remove('highlight');
+            });
+            
+            possibleMoves = calculatePossibleMoves();
+            possibleMoves.forEach(move => {
+                board[move.row][move.col].classList.add('highlight');
+            });
+        }
+
+        function handleSquareClick(event) {
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            
+            const isValidMove = possibleMoves.some(move => 
+                move.row === row && move.col === col
+            );
+            
+            if (isValidMove) {
+                const caughtCarrot = (row === carrotPosition.row && col === carrotPosition.col);
+                bishopPosition = { row, col };
+                
+                if (caughtCarrot) {
+                    score += 10;
+                    carrotsEaten++; // Increment carrots eaten
+                    document.getElementById('score').textContent = score;
+                    document.getElementById('carrots-eaten').textContent = carrotsEaten;
+                    
+                    event.target.classList.add('celebrate');
+                    setTimeout(() => {
+                        event.target.classList.remove('celebrate');
+                    }, 600);
+                    
+                    setTimeout(() => {
+                        generateCarrot();
+                        updateBishopPosition(); // Update bishop position after carrot generation
+                        showPossibleMoves();
+                    }, 300);
+                } else {
+                    updateBishopPosition(); // Update bishop position even if no carrot is eaten
+                    showPossibleMoves();
+                }
+            }
+        }
+
+        function startTimer() {
+            gameTimer = setInterval(() => {
+                gameTime++;
+                document.getElementById('time').textContent = gameTime;
+            }, 1000);
+        }
+
+        function resetGame() {
+            clearInterval(gameTimer);
+            const bottomRows = [0, 1, 2, 3];
+            const randomRow = bottomRows[Math.floor(Math.random() * bottomRows.length)];
+            const randomCol = Math.floor(Math.random() * 8);
+            bishopPosition = { row: randomRow, col: randomCol };
+            
+            carrotPosition = null;
+            score = 0;
+            carrotsEaten = 0; // Reset carrots eaten
+            gameTime = 0;
+            possibleMoves = [];
+            
+            document.getElementById('score').textContent = '0';
+            document.getElementById('carrots-eaten').textContent = '0'; // Update carrots eaten display
+            document.getElementById('time').textContent = '0';
+            
+            initBoard();
+            startTimer();
+        }
+
+        window.addEventListener('load', () => {
+            initBoard();
+            startTimer();
+        });
+    </script>
+</body>
+</html>
